@@ -1,0 +1,21 @@
+{
+  "name": "quota-tracker",
+  "displayName": "额度统计与倒计时",
+  "description": "Local model usage statistics and 5-hour / weekly quota reset countdown dashboard in the Antigravity side pane.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Foxears26",
+    "url": "https://github.com/Foxears26"
+  },
+  "homepage": "https://github.com/Foxears26/agy-quota-tracker",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Foxears26/agy-quota-tracker"
+  },
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "打开额度统计与倒计时面板",
+    "查看本周各模型本地调用次数统计",
+    "把每周额度刷新时间设置为每周一早上 9 点"
+  ]
+}

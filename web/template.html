@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>额度统计与倒计时</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg-1: var(--color-background-primary, #ffffff);
+      --bg-2: var(--color-background-secondary, #f6f7f9);
+      --bg-3: var(--color-background-tertiary, #eef0f4);
+      --fg-1: var(--color-text-primary, #171717);
+      --fg-2: var(--color-text-secondary, #5c6370);
+      --fg-3: var(--color-text-tertiary, #8b92a0);
+      --bd-1: var(--color-border-primary, rgba(0, 0, 0, 0.12));
+      --bd-2: var(--color-border-secondary, rgba(0, 0, 0, 0.07));
+      --accent: var(--color-text-info, #2563eb);
+      --accent-bg: var(--color-background-info, rgba(37, 99, 235, 0.1));
+      --ok: var(--color-text-success, #16a34a);
+      --ok-bg: var(--color-background-success, rgba(22, 163, 74, 0.12));
+      --warn: var(--color-text-warning, #d97706);
+      --warn-bg: var(--color-background-warning, rgba(217, 119, 6, 0.12));
+      --danger: var(--color-text-danger, #dc2626);
+      --danger-bg: var(--color-background-danger, rgba(220, 38, 38, 0.12));
+      --font: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --radius: 10px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg-1: var(--color-background-primary, #14161a);
+        --bg-2: var(--color-background-secondary, #1c1f26);
+        --bg-3: var(--color-background-tertiary, #252933);
+        --fg-1: var(--color-text-primary, #eceff4);
+        --fg-2: var(--color-text-secondary, #a0a8b8);
+        --fg-3: var(--color-text-tertiary, #737b8c);
+        --bd-1: var(--color-border-primary, rgba(255, 255, 255, 0.12));
+        --bd-2: var(--color-border-secondary, rgba(255, 255, 255, 0.07));
+        --accent: var(--color-text-info, #60a5fa);
+        --accent-bg: var(--color-background-info, rgba(96, 165, 250, 0.14));
+      }
+    }
+
+    [data-theme="dark"] {
+      --bg-1: var(--color-background-primary, #14161a);
+      --bg-2: var(--color-background-secondary, #1c1f26);
+      --bg-3: var(--color-background-tertiary, #252933);
+      --fg-1: var(--color-text-primary, #eceff4);
+      --fg-2: var(--color-text-secondary, #a0a8b8);
+      --fg-3: var(--color-text-tertiary, #737b8c);
+      --bd-1: var(--color-border-primary, rgba(255, 255, 255, 0.12));
+      --bd-2: var(--color-border-secondary, rgba(255, 255, 255, 0.07));
+      --accent: var(--color-text-info, #60a5fa);
+      --accent-bg: var(--color-background-info, rgba(96, 165, 250, 0.14));
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg-1);
+      color: var(--fg-1);
+      font-family: var(--font);
+      font-size: 13px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 12px 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .title {
+      font-size: 15px;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+    }
+    .badge {
+      font-size: 10.5px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: var(--bg-3);
+      color: var(--fg-2);
+      border: 1px solid var(--bd-2);
+      white-space: nowrap;
+    }
+    .badge.info {
+      background: var(--accent-bg);
+      color: var(--accent);
+      border-color: transparent;
+    }
+    .badge.ok {
+      background: var(--ok-bg);
+      color: var(--ok);
+      border-color: transparent;
+    }
+    .badge.warn {
+      background: var(--warn-bg);
+      color: var(--warn);
+      border-color: transparent;
+    }
+    .subtitle {
+      font-size: 11px;
+      color: var(--fg-3);
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button {
+      font-family: inherit;
+      font-size: 12px;
+      border-radius: 7px;
+      border: 1px solid var(--bd-1);
+      background: var(--bg-2);
+      color: var(--fg-1);
+      padding: 5px 9px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    button:hover { background: var(--bg-3); }
+    button:disabled { opacity: 0.5; cursor: default; }
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: transparent;
+    }
+    button.primary:hover { opacity: 0.9; background: var(--accent); }
+    button.danger {
+      color: var(--danger);
+      border-color: var(--danger-bg);
+      background: var(--danger-bg);
+    }
+    button.sm {
+      font-size: 11px;
+      padding: 3px 7px;
+      border-radius: 6px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .card {
+      background: var(--bg-2);
+      border: 1px solid var(--bd-2);
+      border-radius: var(--radius);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--fg-2);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .countdown {
+      font-family: var(--mono);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--fg-1);
+      line-height: 1.2;
+    }
+    .countdown.idle {
+      font-family: var(--font);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ok);
+    }
+    .meta-line {
+      font-size: 11.5px;
+      color: var(--fg-2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .mono { font-family: var(--mono); }
+
+    .bar-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .bar-track {
+      height: 6px;
+      width: 100%;
+      background: var(--bg-3);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--accent);
+      transition: width 0.25s ease;
+    }
+    .bar-fill.ok { background: var(--ok); }
+    .bar-fill.warn { background: var(--warn); }
+    .bar-fill.danger { background: var(--danger); }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      padding-top: 2px;
+    }
+    .kpi {
+      background: var(--bg-1);
+      border: 1px solid var(--bd-2);
+      border-radius: 7px;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    .kpi-val {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .kpi-lbl {
+      font-size: 10.5px;
+      color: var(--fg-3);
+    }
+
+    .snapshot-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: var(--bg-2);
+      border: 1px dashed var(--bd-1);
+      border-radius: var(--radius);
+      padding: 9px 12px;
+    }
+    .snapshot-text {
+      font-size: 12px;
+      color: var(--fg-2);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .snapshot-strong {
+      color: var(--fg-1);
+      font-weight: 600;
+    }
+
+    .model-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .model-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .model-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .model-name {
+      font-weight: 600;
+      font-size: 12.5px;
+      word-break: break-word;
+    }
+    .model-nums {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--fg-2);
+      white-space: nowrap;
+    }
+
+    .chart {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      align-items: end;
+      height: 88px;
+      padding-top: 12px;
+    }
+    .chart-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .chart-val {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--fg-3);
+    }
+    .chart-bar {
+      width: 100%;
+      max-width: 28px;
+      min-height: 3px;
+      border-radius: 5px 5px 2px 2px;
+      background: var(--accent);
+      opacity: 0.85;
+      transition: height 0.25s ease;
+    }
+    .chart-bar.zero {
+      background: var(--bg-3);
+      opacity: 1;
+    }
+    .chart-lbl {
+      font-size: 10px;
+      color: var(--fg-3);
+      white-space: nowrap;
+    }
+
+    .panel-drawer {
+      background: var(--bg-2);
+      border: 1px solid var(--bd-1);
+      border-radius: var(--radius);
+      padding: 12px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .panel-drawer.open { display: flex; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 8px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .field label {
+      font-size: 11px;
+      color: var(--fg-2);
+      font-weight: 500;
+    }
+    input, select {
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--bd-1);
+      background: var(--bg-1);
+      color: var(--fg-1);
+      width: 100%;
+    }
+    .row-inline {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .divider {
+      height: 1px;
+      background: var(--bd-2);
+      margin: 2px 0;
+    }
+    .empty {
+      font-size: 12px;
+      color: var(--fg-3);
+      text-align: center;
+      padding: 12px 6px;
+    }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 12px;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--fg-1);
+      color: var(--bg-1);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 20;
+    }
+    .toast.show {
+      opacity: 0.95;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title-group">
+        <div class="title-row">
+          <span class="title">额度统计与倒计时</span>
+          <span class="badge" id="plan-badge">Pro / Ultra</span>
+          <span class="badge info">本地统计</span>
+        </div>
+        <div class="subtitle" id="sync-status">正在连接本地统计服务…</div>
+      </div>
+      <div class="actions">
+        <button id="btn-refresh" title="刷新统计">↻ 刷新</button>
+        <button id="btn-toggle-settings" title="配置刷新时间与参考上限">⚙ 设置</button>
+      </div>
+    </div>
+
+    <div class="panel-drawer" id="settings-drawer">
+      <div class="card-head">
+        <span class="card-title">刷新周期与参考阈值设置</span>
+        <button class="sm" id="btn-close-settings">收起</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="cfg-plan">订阅类型</label>
+          <select id="cfg-plan">
+            <option value="pro_ultra">Pro / Ultra（5小时 + 每周）</option>
+            <option value="free_plus">Free / Plus（仅每周）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cfg-weekly-mode">每周刷新设定方式</label>
+          <select id="cfg-weekly-mode">
+            <option value="weekday">按每周固定星期与时间循环</option>
+            <option value="exact">按 Settings 显示的精确日期时间</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid" id="weekly-weekday-fields">
+        <div class="field">
+          <label for="cfg-weekday">每周刷新星期</label>
+          <select id="cfg-weekday">
+            <option value="1">每周一</option>
+            <option value="2">每周二</option>
+            <option value="3">每周三</option>
+            <option value="4">每周四</option>
+            <option value="5">每周五</option>
+            <option value="6">每周六</option>
+            <option value="0">每周日</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cfg-weektime">刷新时间（本地）</label>
+          <input id="cfg-weektime" type="time" value="09:00" />
+        </div>
+      </div>
+
+      <div class="form-grid" id="weekly-exact-fields" style="display:none;">
+        <div class="field">
+          <label for="cfg-weekexact">下次每周刷新时间（到期后自动顺延7天）</label>
+          <input id="cfg-weekexact" type="datetime-local" />
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="cfg-5h-mode">5 小时窗口计算方式</label>
+          <select id="cfg-5h-mode">
+            <option value="auto">自动（以近 5h 首条调用为起点）</option>
+            <option value="manual">手动指定下次 5h 刷新倒计时</option>
+          </select>
+        </div>
+        <div class="field" id="fiveh-manual-field" style="display:none;">
+          <label>距离下次 5h 刷新还剩（小时 / 分钟）</label>
+          <div class="row-inline">
+            <input id="cfg-5h-rem-h" type="number" min="0" max="24" placeholder="小时" style="width:72px" />
+            <span>时</span>
+            <input id="cfg-5h-rem-m" type="number" min="0" max="59" placeholder="分钟" style="width:72px" />
+            <span>分</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="cfg-week-limit">本周参考调用次数上限（0=隐藏进度条）</label>
+          <input id="cfg-week-limit" type="number" min="0" step="10" value="300" />
+        </div>
+        <div class="field">
+          <label for="cfg-5h-limit">5 小时参考调用次数上限（0=隐藏进度条）</label>
+          <input id="cfg-5h-limit" type="number" min="0" step="5" value="60" />
+        </div>
+      </div>
+
+      <div class="row-inline" style="justify-content: space-between; margin-top: 2px;">
+        <div class="row-inline">
+          <button class="danger sm" id="btn-clear-events">清空本地调用记录</button>
+          <button class="sm" id="btn-log-test">+1 手动记次</button>
+        </div>
+        <button class="primary" id="btn-save-settings">保存设置</button>
+      </div>
+    </div>
+
+    <div class="panel-drawer" id="snapshot-drawer">
+      <div class="card-head">
+        <span class="card-title">记录官方余量校准快照（对照 Settings → Models）</span>
+        <button class="sm" id="btn-close-snapshot">取消</button>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="snap-weekly">官方显示「本周剩余 %」（选填）</label>
+          <input id="snap-weekly" type="number" min="0" max="100" placeholder="例如 65" />
+        </div>
+        <div class="field">
+          <label for="snap-5h">官方显示「5h 窗口剩余 %」（选填）</label>
+          <input id="snap-5h" type="number" min="0" max="100" placeholder="例如 80" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="snap-note">备注（选填，例如模型池名称）</label>
+        <input id="snap-note" type="text" placeholder="例如 Gemini 4 池" />
+      </div>
+      <div class="row-inline" style="justify-content: flex-end;">
+        <button class="sm" id="btn-clear-snapshot">清除快照</button>
+        <button class="primary" id="btn-save-snapshot">保存快照</button>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card" id="card-5h">
+        <div class="card-head">
+          <span class="card-title">5 小时滚动窗口</span>
+          <span class="badge" id="fiveh-mode-badge">自动</span>
+        </div>
+        <div class="countdown" id="cd-5h">--:--:--</div>
+        <div class="meta-line">
+          <span id="fiveh-reset-at">近 5 小时暂无调用</span>
+          <button class="sm" id="btn-reset-5h" title="立即将当前时间设为新一轮 5 小时起点">从现在计 5h</button>
+        </div>
+        <div class="bar-wrap">
+          <div class="meta-line">
+            <span>窗口内调用：<strong class="mono" id="fiveh-calls">0</strong> 次</span>
+            <span id="fiveh-pct-label">时间进度 0%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="fiveh-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="card" id="card-weekly">
+        <div class="card-head">
+          <span class="card-title">本周额度重置倒计时</span>
+          <span class="badge info" id="weekly-cycle-badge">每周循环</span>
+        </div>
+        <div class="countdown" id="cd-weekly">--天 --:--:--</div>
+        <div class="meta-line">
+          <span id="weekly-reset-at">下次刷新：--</span>
+        </div>
+        <div class="bar-wrap">
+          <div class="meta-line">
+            <span>本周调用：<strong class="mono" id="weekly-calls">0</strong> 次</span>
+            <span id="weekly-pct-label">周进度 0%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="weekly-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="snapshot-bar">
+      <div class="snapshot-text" id="snapshot-display">
+        <span class="snapshot-strong">尚未记录官方余量快照</span>
+        <span>查看 Settings → Models 后可顺手记一笔，面板会自动统计此后新增调用</span>
+      </div>
+      <button class="sm" id="btn-open-snapshot">记录校准</button>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-val" id="kpi-today">0</div>
+        <div class="kpi-lbl">今日调用</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val" id="kpi-week-turns">0</div>
+        <div class="kpi-lbl">本周完成轮次</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val" id="kpi-week-convs">0</div>
+        <div class="kpi-lbl">本周会话数</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">本周各模型调用分布</span>
+        <span class="badge" id="model-count-badge">0 个模型</span>
+      </div>
+      <div class="model-list" id="model-list">
+        <div class="empty">暂无本地调用记录。开始对话后 Hook 会自动记录每次模型调用。</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">近 7 天调用趋势</span>
+        <span class="badge" id="total-calls-badge">累计 0 次</span>
+      </div>
+      <div class="chart" id="daily-chart"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <!-- INLINE_APP_SCRIPT -->
+</body>
+</html>
